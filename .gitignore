@@ -1,0 +1,49 @@
+# Python bytecode files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Django-specific files
+*.log
+*.pot
+*.pyc
+*.db
+*.sqlite3
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Environment variables file
+.env
+
+# Django static and media files
+/static/
+/media/
+
+# IDE/editor files
+.idea/
+.vscode/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Coverage reports
+.coverage
+coverage.xml
+*.cover
+
+# Test output
+nosetests.xml
+coverage.json
+*.hypothesis/
+
+# Docker files
+docker-compose.yml
+Dockerfile
+
+# Render config files (optional, if you don't want to commit them)
+render.yaml

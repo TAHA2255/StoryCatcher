@@ -1,0 +1,184 @@
+{% extends 'chatbot/base.html' %}
+{% block content %}
+<div class="card shadow-sm">
+  <div class="card-body" id="chat-box" style="max-height: 70vh; overflow-y: auto;">
+    <div class="mb-3"><strong>🤖 Assistant:</strong> I’m here to help you turn a life moment into a visual story. Ready to begin your interview?</div>
+  </div>
+</div>
+
+<form id="chat-form" class="mt-3">
+  <div class="input-group">
+    <textarea class="form-control" id="chat-input" rows="2" placeholder="Type your message..." required></textarea>
+    <button class="btn btn-primary" type="submit">Send</button>
+  </div>
+  <div id="script-loader" class="text-center my-3 d-none">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Generating script...</span>
+    </div>
+    <div>Generating script...</div>
+  </div>
+  
+</form>
+
+<!-- Hidden editor section for script and video -->
+<div class="card shadow-sm mt-4 d-none" id="editor-section">
+  <div class="card-body">
+    <h5>📝 Review & Edit Script</h5>
+    <textarea id="script-editor" class="form-control mb-3" rows="10"></textarea>
+    <button class="btn btn-success" id="generate-video-btn">🎬 Generate Video</button>
+    <div class="mt-4 d-none" id="video-result">
+      <h5>🎥 Your Video</h5>
+      <video id="final-video" controls style="max-height: 90vh; aspect-ratio: 9 / 16; display: block; margin: auto;"></video>
+      <a id="download-video-btn" href="#" class="btn btn-outline-primary mt-3" download>⬇️ Download Video</a>
+    </div>
+  </div>
+</div>
+<script>
+  const chatBox = document.getElementById('chat-box');
+  const chatForm = document.getElementById('chat-form');
+  const chatInput = document.getElementById('chat-input');
+  const scriptEditor = document.getElementById('script-editor');
+  const editorSection = document.getElementById('editor-section');
+  const generateBtn = document.getElementById('generate-video-btn');
+  const finalVideo = document.getElementById('final-video');
+  const videoContainer = document.getElementById('video-result');
+
+  let started = false;
+
+  function appendMessage(role, content, isFinal = false, videoUrl = null) {
+    const wrapper = document.createElement('div');
+    wrapper.classList.add('mb-4');
+
+    const messageDiv = document.createElement('div');
+    messageDiv.innerHTML = `<strong>${role === 'user' ? '🧍 You' : '🤖 Assistant'}:</strong> ${content}`;
+    wrapper.appendChild(messageDiv);
+
+    if (isFinal && videoUrl) {
+      const videoDiv = document.createElement('div');
+      videoDiv.classList.add('mt-2');
+
+      const video = document.createElement('video');
+      video.controls = true;
+      video.src = videoUrl;
+      video.style.width = "100%";
+      videoDiv.appendChild(video);
+
+      wrapper.appendChild(videoDiv);
+    }
+
+    chatBox.appendChild(wrapper);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  function sendMessage() {
+  const message = chatInput.value.trim();
+  if (!message) return;
+
+  appendMessage('user', message);
+  chatInput.value = "";
+
+  // Show loader and temporarily disable input
+  const loader = document.getElementById('script-loader');
+  loader.classList.remove('d-none');
+  chatInput.disabled = true;
+
+  fetch("{% url 'chat_api' %}", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": "{{ csrf_token }}"
+    },
+    body: JSON.stringify({
+      message: message,
+      start: !started
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    loader.classList.add('d-none');
+    chatInput.disabled = false;
+    chatInput.focus();
+
+    let hideForm = false;
+
+    data.messages.forEach(msg => {
+      if (msg.type === 'result') {
+        scriptEditor.value = msg.content.replace(/<[^>]*>?/gm, "");
+        editorSection.classList.remove('d-none');
+        appendMessage('assistant', `<pre style="white-space: pre-wrap;">${msg.content}</pre>`);
+        hideForm = true;
+      } else if (msg.type === 'final') {
+        appendMessage('assistant', msg.content, true, msg.video_url);
+      } else {
+        appendMessage('assistant', msg.content);
+      }
+    });
+
+    if (hideForm) {
+      chatForm.classList.add('d-none');  // ✅ Hide only when script is ready
+    } else {
+      chatForm.classList.remove('d-none'); // Ensure form is still visible otherwise
+    }
+
+    started = true;
+  })
+  .catch(error => {
+    console.error("Error:", error);
+    loader.classList.add('d-none');
+    chatInput.disabled = false;
+  });
+}
+
+chatForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    sendMessage();
+  });
+
+  chatInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  generateBtn.addEventListener('click', function() {
+    const finalScript = scriptEditor.value.trim();
+    if (!finalScript) return alert("Script cannot be empty.");
+
+    // ✅ Show loading state
+    generateBtn.disabled = true;
+    generateBtn.innerHTML = "⏳ Generating...";
+
+    fetch("{% url 'generate_video_api' %}", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": "{{ csrf_token }}"
+      },
+      body: JSON.stringify({
+        script: finalScript
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      generateBtn.disabled = false;
+      generateBtn.innerHTML = "🎬 Generate Video";
+
+      if (data.video_url) {
+        finalVideo.src = data.video_url;
+        videoContainer.classList.remove("d-none");
+            // ✅ Set download link
+        const downloadBtn = document.getElementById("download-video-btn");
+        downloadBtn.href = data.video_url;
+        downloadBtn.classList.remove("d-none");
+        chatBox.scrollTop = chatBox.scrollHeight;
+      } else {
+        console.log(data);
+        alert("Something went wrong while generating the video.");
+      }
+    });
+  });
+</script>
+
+
+{% endblock %}
