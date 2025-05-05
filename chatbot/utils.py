@@ -223,7 +223,7 @@ def get_videogen_file_status(api_file_id):
             if result["loadingState"] == "REJECTED":
                 print("Video generation failed:", result.get("errorDisplayMessage"))
                 return result
-            time.sleep(30)
+            time.sleep(10)
 
         return None  #
     except Exception as e:
