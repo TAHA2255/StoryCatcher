@@ -1,7 +1,7 @@
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import StorySession
-from .utils import get_next_question, generate_script, create_videogen_video, fetch_videogen_status
+from .utils import get_next_question, generate_script, create_videogen_video, fetch_videogen_status, create_videogen_video_lazy, get_videogen_file_status_once
 import json
 from django.shortcuts import render
 from .models import StorySession
@@ -69,6 +69,33 @@ def chat_api(request):
     return JsonResponse({"messages": response_data})
 
 
+# @csrf_exempt
+# def generate_video_api(request):
+#     if not request.session.session_key:
+#         return JsonResponse({"error": "Session not found"}, status=403)
+
+#     user_id = request.session.session_key
+#     session = StorySession.objects.get(user_id=user_id)
+
+#     data = json.loads(request.body)
+#     updated_script = data.get("script")
+
+#     if updated_script:
+#         session.generated_script = updated_script
+#         session.video_url = ""
+#         session.save()
+
+#     video_url = create_videogen_video(session.generated_script)
+
+
+#     session.video_url = video_url
+#     session.save()
+
+#     return JsonResponse({
+#         "message": "Video generated successfully.",
+#         "video_url": video_url
+#     })
+
 @csrf_exempt
 def generate_video_api(request):
     if not request.session.session_key:
@@ -85,16 +112,18 @@ def generate_video_api(request):
         session.video_url = ""
         session.save()
 
-    video_url = create_videogen_video(session.generated_script)
+    # ✅ Start the job but DO NOT wait
+    api_file_id = create_videogen_video_lazy(session.generated_script)
+    print(api_file_id)
 
-
-    session.video_url = video_url
+    session.videogen_file_id = api_file_id  # Save file ID to track status later
     session.save()
 
     return JsonResponse({
-        "message": "Video generated successfully.",
-        "video_url": video_url
+        "status": "started",
+        "api_file_id": api_file_id
     })
+
 
     
 def chat_home(request):
@@ -103,3 +132,33 @@ def chat_home(request):
 
 
 
+@csrf_exempt
+def video_status_api(request):
+    if not request.session.session_key:
+        return JsonResponse({"error": "Session not found"}, status=403)
+
+    user_id = request.session.session_key
+    session = StorySession.objects.get(user_id=user_id)
+
+    if not session.videogen_file_id:
+        return JsonResponse({"status": "not_started"})
+
+    result = get_videogen_file_status_once(session.videogen_file_id)
+
+    if result["loadingState"] == "FULFILLED" and result["apiFileSignedUrl"]:
+        session.video_url = result["apiFileSignedUrl"]
+        session.save()
+        return JsonResponse({
+            "status": "done",
+            "video_url": result["apiFileSignedUrl"]
+        })
+    elif result["loadingState"] == "REJECTED":
+        return JsonResponse({
+            "status": "error",
+            "error": result.get("errorDisplayMessage", "Video generation failed.")
+        })
+
+    return JsonResponse({
+        "status": "processing",
+        "progress": result.get("progressPercentage", 0)
+    })

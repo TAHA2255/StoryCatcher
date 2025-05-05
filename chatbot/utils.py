@@ -229,3 +229,73 @@ def get_videogen_file_status(api_file_id):
     except Exception as e:
         print(f"[VideoGen] Error polling video: {e}")
         return {}
+
+def create_videogen_video_lazy(script):
+    headers = {
+        "Authorization": f"Bearer {settings.VIDEOGEN_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    clean_script = extract_voiceover_script(script)
+
+    payload = {
+        "script": clean_script,
+        "voice": "Matilda",
+        "voiceVolume": 1,
+        "musicUrl": "",
+        "musicVolume": 0.15,
+        "captionFontName": "Luckiest Guy",
+        "captionFontSize": 75,
+        "captionFontWeight": 700,
+        "captionTextColor": {"red": 255, "green": 0, "blue": 0},
+        "captionTextJustification": "CENTER",
+        "captionVerticalAlignment": "BOTTOM",
+        "captionStrokeWeight": 3,
+        "captionBackgroundStyleType": "WRAPPED",
+        "captionBackgroundBorderRadius": 0.3,
+        "captionBackgroundOpacity": 0.6,
+        "captionIsHidden": False,
+        "aspectRatio": {"width": 9, "height": 16},
+        "minDimensionPixels": 1080
+    }
+
+    for attempt in range(3):
+        try:
+            response = requests.post(
+               "https://ext.videogen.io/v1/script-to-video",
+                json=payload,
+                headers=headers,
+            )
+            response.raise_for_status()
+            data = response.json()
+            print(data)
+
+            if "apiFileId" in data:
+                print(f"[VideoGen] apiFileId received on attempt {attempt + 1}")
+                return data["apiFileId"]
+
+            if "errorDisplayMessage" in data:
+                print(f"[VideoGen] Attempt {attempt + 1} failed: {data['errorDisplayMessage']}")
+
+        except requests.exceptions.RequestException as e:
+            print(f"[VideoGen] Exception on attempt {attempt + 1}: {e}")
+
+        time.sleep(3)  # wait before next attempt
+
+    print("[VideoGen] ❌ Failed to obtain apiFileId after 3 attempts.")
+    return None
+
+
+def get_videogen_file_status_once(api_file_id):
+    headers = {
+        "Authorization": f"Bearer {settings.VIDEOGEN_API_KEY}"
+    }
+
+    params = {"apiFileId": api_file_id}
+
+    try:
+        response = requests.get("https://ext.videogen.io/v1/get-file", headers=headers, params=params)
+        return response.json()
+    except Exception as e:
+        print(f"[VideoGen] Error checking video: {e}")
+        return {"loadingState": "ERROR", "errorDisplayMessage": str(e)}

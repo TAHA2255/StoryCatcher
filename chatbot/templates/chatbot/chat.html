@@ -141,43 +141,74 @@ chatForm.addEventListener('submit', function(e) {
     }
   });
 
-  generateBtn.addEventListener('click', function() {
-    const finalScript = scriptEditor.value.trim();
-    if (!finalScript) return alert("Script cannot be empty.");
+generateBtn.addEventListener('click', function () {
+  const finalScript = scriptEditor.value.trim();
+  if (!finalScript) return alert("Script cannot be empty.");
 
-    // ✅ Show loading state
-    generateBtn.disabled = true;
-    generateBtn.innerHTML = "⏳ Generating...";
+  generateBtn.disabled = true;
+  generateBtn.innerHTML = "⏳ Starting...";
 
-    fetch("{% url 'generate_video_api' %}", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": "{{ csrf_token }}"
-      },
-      body: JSON.stringify({
-        script: finalScript
-      })
-    })
+  fetch("{% url 'generate_video_api' %}", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": "{{ csrf_token }}"
+    },
+    body: JSON.stringify({ script: finalScript })
+  })
     .then(res => res.json())
     .then(data => {
-      generateBtn.disabled = false;
-      generateBtn.innerHTML = "🎬 Generate Video";
-
-      if (data.video_url) {
-        finalVideo.src = data.video_url;
-        videoContainer.classList.remove("d-none");
-            // ✅ Set download link
-        const downloadBtn = document.getElementById("download-video-btn");
-        downloadBtn.href = data.video_url;
-        downloadBtn.classList.remove("d-none");
-        chatBox.scrollTop = chatBox.scrollHeight;
+      if (data.status === "started") {
+        generateBtn.innerHTML = "🎥 Generating Video...";
+        pollForVideo();
       } else {
-        console.log(data);
-        alert("Something went wrong while generating the video.");
+        alert("Failed to start video generation.");
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = "🎬 Generate Video";
       }
     });
-  });
+});
+
+function pollForVideo() {
+  let attempts = 0;
+  const maxAttempts = 20;
+
+  const poll = setInterval(() => {
+    fetch("{% url 'video_status_api' %}")
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "done") {
+          clearInterval(poll);
+          finalVideo.src = data.video_url;
+          videoContainer.classList.remove("d-none");
+
+          // Show download
+          const downloadBtn = document.getElementById("download-video-btn");
+          downloadBtn.href = data.video_url;
+          downloadBtn.classList.remove("d-none");
+
+          generateBtn.disabled = false;
+          generateBtn.innerHTML = "🎬 Generate Video";
+        } else if (data.status === "error") {
+          clearInterval(poll);
+          alert("Video generation failed: " + data.error);
+          generateBtn.disabled = false;
+          generateBtn.innerHTML = "🎬 Generate Video";
+        } else {
+          console.log(`Video processing: ${data.progress || 0}%`);
+        }
+      });
+
+    attempts++;
+    if (attempts > maxAttempts) {
+      clearInterval(poll);
+      alert("Video generation timed out.");
+      generateBtn.disabled = false;
+      generateBtn.innerHTML = "🎬 Generate Video";
+    }
+  }, 10000); // every 10 seconds
+}
+ 
 </script>
 
 

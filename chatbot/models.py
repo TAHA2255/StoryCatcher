@@ -13,3 +13,4 @@ class StorySession(models.Model):
     video_url = models.URLField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     user_script_modification = models.TextField(blank=True)
+    videogen_file_id = models.CharField(max_length=255, blank=True, null=True)
