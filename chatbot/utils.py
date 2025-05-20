@@ -259,7 +259,7 @@ def create_videogen_video_lazy(script):
         "minDimensionPixels": 1080
     }
 
-    for attempt in range(3):
+    for attempt in range(5):
         try:
             response = requests.post(
                "https://ext.videogen.io/v1/script-to-video",
