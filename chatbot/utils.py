@@ -173,7 +173,7 @@ def create_videogen_video(script_text):
         "captionBackgroundStyleType": "WRAPPED",
         "captionBackgroundBorderRadius": 0.3,
         "captionBackgroundOpacity": 0.6,
-        "captionIsHidden": False,
+        "captionIsHidden": false,
         "aspectRatio": {
             "width": 9,
             "height": 16
