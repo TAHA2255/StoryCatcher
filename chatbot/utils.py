@@ -3,8 +3,10 @@ import requests
 from django.conf import settings
 import time
 import re
+from .models import PromptConfig
 
 openai.api_key = settings.OPENAI_API_KEY
+
 
 QUESTIONS = [
     "1. What was the life-changing moment or experience you went through?",
@@ -20,6 +22,34 @@ def get_next_question(session):
     return None
 
 
+# def generate_script(session):
+#     full_story = f"""
+#     Q1: {session.q1}
+#     Q2: {session.q2}
+#     Q3: {session.q3}
+#     Q4: {session.q4}
+#     """
+
+#     prompt = f"""
+# You are a compassionate, cinematic AI storyteller.
+# From this story, generate:
+
+# 1. A **4-part storyboard** describing each visual scene in detail with headings, visuals, mood, and text overlays.
+# 2. A **short voiceover script**, no more than **80–90 words**, written like a gentle inner monologue, scene by scene, matching the storyboard.
+
+# The script should be paced for a video of about **45–50 seconds**, with poetic and intimate language, vivid imagery, and soft rhythm.
+
+# User Story:
+# {full_story}
+#     """
+
+#     response = openai.ChatCompletion.create(
+#         model="gpt-4",
+#         messages=[{"role": "user", "content": prompt}],
+#         temperature=0.85
+#     )
+
+#     return response['choices'][0]['message']['content']
 def generate_script(session):
     full_story = f"""
     Q1: {session.q1}
@@ -28,7 +58,14 @@ def generate_script(session):
     Q4: {session.q4}
     """
 
-    prompt = f"""
+    # ✅ Try to get active prompt
+    prompt_obj = PromptConfig.objects.filter(use_as_default=True).order_by('-created_at').first()
+
+    if prompt_obj:
+        prompt = prompt_obj.prompt_template.replace("{{story}}", full_story)
+    else:
+        # ✅ Fallback default
+        prompt = f"""
 You are a compassionate, cinematic AI storyteller.
 From this story, generate:
 
@@ -39,7 +76,7 @@ The script should be paced for a video of about **45–50 seconds**, with poetic
 
 User Story:
 {full_story}
-    """
+        """
 
     response = openai.ChatCompletion.create(
         model="gpt-4",
@@ -48,8 +85,6 @@ User Story:
     )
 
     return response['choices'][0]['message']['content']
-
-
 
 import re
 
@@ -75,54 +110,6 @@ def extract_voiceover_script(raw_text):
 
     # Join all sentences into a single script block
     return " ".join(script_lines)
-
-
-
-# import re
-
-# def extract_voiceover_script(raw_text):
-#     """
-#     Extract only the voiceover script (quoted lines or unquoted paragraphs) from within the
-#     'Voiceover Script:' section of an OpenAI-generated response.
-#     Removes markdown like Mood, overlays, bold, and Scene labels.
-#     """
-#     # Isolate only the Voiceover Script section
-#     voiceover_section_match = re.search(r"Voiceover Script:\s*(.+)", raw_text, re.DOTALL)
-#     if not voiceover_section_match:
-#         return ""
-
-#     voiceover_text = voiceover_section_match.group(1)
-
-#     lines = voiceover_text.splitlines()
-#     script_lines = []
-
-#     for line in lines:
-#         line = line.strip()
-
-#         # Skip mood, overlays, markdown
-#         if any(skip in line for skip in ["**Mood:**", "**Text overlays:**", "Storyboard:", "Visual:", "Heading:", "Mood:", "Text Overlay:"]):
-#             continue
-
-#         # Remove scene numbering or markdown
-#         line = re.sub(r"^(\d+\.\s*)?\*\*Scene \d+\:\*\*", "", line)
-
-#         # If line contains quotes, extract them
-#         matches = re.findall(r'"([^"]+)"', line)
-#         if matches:
-#             script_lines.extend(matches)
-#         else:
-#             # If it's a normal paragraph (no quotes), include as-is if it has content
-#             if line and not line.startswith("Text Overlay") and not line.startswith("Heading"):
-#                 script_lines.append(line)
-
-#     return " ".join(script_lines)
-
-
-
-
-
-
-
 
 
 
@@ -173,7 +160,6 @@ def create_videogen_video(script_text):
         "captionBackgroundStyleType": "WRAPPED",
         "captionBackgroundBorderRadius": 0.3,
         "captionBackgroundOpacity": 0.6,
-        "captionIsHidden": false,
         "aspectRatio": {
             "width": 9,
             "height": 16
@@ -230,6 +216,7 @@ def get_videogen_file_status(api_file_id):
         print(f"[VideoGen] Error polling video: {e}")
         return {}
 
+
 def create_videogen_video_lazy(script):
     headers = {
         "Authorization": f"Bearer {settings.VIDEOGEN_API_KEY}",
@@ -259,30 +246,34 @@ def create_videogen_video_lazy(script):
         "minDimensionPixels": 1080
     }
 
-    for attempt in range(5):
+
+    for attempt in range(3):
         try:
             response = requests.post(
-               "https://ext.videogen.io/v1/script-to-video",
+                "https://ext.videogen.io/v1/script-to-video",
                 json=payload,
-                headers=headers,
+                headers=headers
             )
-            response.raise_for_status()
-            data = response.json()
-            print(data)
+            response.raise_for_status()  # 💥 This is where 403 gets raised
 
+            data = response.json()
             if "apiFileId" in data:
                 print(f"[VideoGen] apiFileId received on attempt {attempt + 1}")
                 return data["apiFileId"]
 
-            if "errorDisplayMessage" in data:
-                print(f"[VideoGen] Attempt {attempt + 1} failed: {data['errorDisplayMessage']}")
+            print(f"[VideoGen] Unexpected response: {data}")
+        except requests.exceptions.HTTPError as e:
+            print(f"[VideoGen] HTTP error on attempt {attempt+1}: {e}")
+            try:
+                print("Response:", response.json())
+            except Exception:
+                pass
+        except Exception as e:
+            print(f"[VideoGen] Exception on attempt {attempt+1}: {e}")
 
-        except requests.exceptions.RequestException as e:
-            print(f"[VideoGen] Exception on attempt {attempt + 1}: {e}")
+        time.sleep(10)
 
-        time.sleep(3)  # wait before next attempt
-
-    print("[VideoGen] ❌ Failed to obtain apiFileId after 3 attempts.")
+    print("[VideoGen] Failed to obtain apiFileId after retries.")
     return None
 
 

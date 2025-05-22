@@ -69,33 +69,6 @@ def chat_api(request):
     return JsonResponse({"messages": response_data})
 
 
-# @csrf_exempt
-# def generate_video_api(request):
-#     if not request.session.session_key:
-#         return JsonResponse({"error": "Session not found"}, status=403)
-
-#     user_id = request.session.session_key
-#     session = StorySession.objects.get(user_id=user_id)
-
-#     data = json.loads(request.body)
-#     updated_script = data.get("script")
-
-#     if updated_script:
-#         session.generated_script = updated_script
-#         session.video_url = ""
-#         session.save()
-
-#     video_url = create_videogen_video(session.generated_script)
-
-
-#     session.video_url = video_url
-#     session.save()
-
-#     return JsonResponse({
-#         "message": "Video generated successfully.",
-#         "video_url": video_url
-#     })
-
 @csrf_exempt
 def generate_video_api(request):
     if not request.session.session_key:
@@ -162,3 +135,14 @@ def video_status_api(request):
         "status": "processing",
         "progress": result.get("progressPercentage", 0)
     })
+
+
+from django.contrib.auth.models import User
+from django.http import JsonResponse
+
+def create_admin_user(request):
+    if User.objects.filter(username="admin").exists():
+        return JsonResponse({"status": "Admin already exists"})
+
+    User.objects.create_superuser("admin", "admin@example.com", "admin")
+    return JsonResponse({"status": "Superuser created!"})

@@ -14,3 +14,16 @@ class StorySession(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     user_script_modification = models.TextField(blank=True)
     videogen_file_id = models.CharField(max_length=255, blank=True, null=True)
+
+
+
+
+
+class PromptConfig(models.Model):
+    name = models.CharField(max_length=100, default="Default")
+    prompt_template = models.TextField(help_text="Use {{story}} as a placeholder for the user story.")
+    use_as_default = models.BooleanField(default=False)  # ✅ Add this field
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
