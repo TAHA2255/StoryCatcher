@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import chat_api,generate_video_api, chat_home, video_status_api, create_admin_user
+from .views import chat_api,generate_video_api, chat_home, video_status_api, create_admin_user, collect_email
 
 
 
@@ -10,4 +10,6 @@ urlpatterns = [
     path("api/chat/", chat_api, name="chat_api"),
     path("api/generate-video/", generate_video_api, name="generate_video_api"),
     path('api/video-status/', video_status_api, name='video_status_api'),
+    path('api/collect-email/', collect_email, name='collect_email'),
+
 ]

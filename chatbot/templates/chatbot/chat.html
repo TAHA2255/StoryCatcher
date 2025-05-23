@@ -33,7 +33,251 @@
     </div>
   </div>
 </div>
+<!-- Email modal -->
+<div class="modal fade" id="emailModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Enter your email to download</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="email" class="form-control" id="email-input" placeholder="you@example.com" />
+        <div id="email-error" class="text-danger mt-2" style="display:none;">Please enter a valid email.</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="confirm-email-download">Download</button>
+      </div>
+    </div>
+  </div>
+</div>
 <script>
+  const chatBox = document.getElementById('chat-box');
+  const chatForm = document.getElementById('chat-form');
+  const chatInput = document.getElementById('chat-input');
+  const scriptEditor = document.getElementById('script-editor');
+  const editorSection = document.getElementById('editor-section');
+  const generateBtn = document.getElementById('generate-video-btn');
+  const finalVideo = document.getElementById('final-video');
+  const videoContainer = document.getElementById('video-result');
+  const downloadBtn = document.getElementById("download-video-btn");
+
+  let started = false;
+
+  function appendMessage(role, content, isFinal = false, videoUrl = null) {
+    const wrapper = document.createElement('div');
+    wrapper.classList.add('mb-4');
+
+    const messageDiv = document.createElement('div');
+    messageDiv.innerHTML = `<strong>${role === 'user' ? '🧍 You' : '🤖 Assistant'}:</strong> ${content}`;
+    wrapper.appendChild(messageDiv);
+
+    if (isFinal && videoUrl) {
+      const videoDiv = document.createElement('div');
+      videoDiv.classList.add('mt-2');
+
+      const video = document.createElement('video');
+      video.controls = true;
+      video.src = videoUrl;
+      video.style.width = "100%";
+      videoDiv.appendChild(video);
+
+      wrapper.appendChild(videoDiv);
+    }
+
+    chatBox.appendChild(wrapper);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  function sendMessage() {
+    const message = chatInput.value.trim();
+    if (!message) return;
+
+    appendMessage('user', message);
+    chatInput.value = "";
+
+    const loader = document.getElementById('script-loader');
+    loader.classList.remove('d-none');
+    chatInput.disabled = true;
+
+    fetch("{% url 'chat_api' %}", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": "{{ csrf_token }}"
+      },
+      body: JSON.stringify({
+        message: message,
+        start: !started
+      })
+    })
+      .then(res => res.json())
+      .then(data => {
+        loader.classList.add('d-none');
+        chatInput.disabled = false;
+        chatInput.focus();
+
+        let hideForm = false;
+
+        data.messages.forEach(msg => {
+          if (msg.type === 'result') {
+            scriptEditor.value = msg.content.replace(/<[^>]*>?/gm, "");
+            editorSection.classList.remove('d-none');
+            appendMessage('assistant', `<pre style="white-space: pre-wrap;">${msg.content}</pre>`);
+            hideForm = true;
+          } else if (msg.type === 'final') {
+            appendMessage('assistant', msg.content, true, msg.video_url);
+          } else {
+            appendMessage('assistant', msg.content);
+          }
+        });
+
+        if (hideForm) {
+          chatForm.classList.add('d-none');
+        } else {
+          chatForm.classList.remove('d-none');
+        }
+
+        started = true;
+      })
+      .catch(error => {
+        console.error("Error:", error);
+        loader.classList.add('d-none');
+        chatInput.disabled = false;
+      });
+  }
+
+  chatForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    sendMessage();
+  });
+
+  chatInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  generateBtn.addEventListener('click', function () {
+    const finalScript = scriptEditor.value.trim();
+    if (!finalScript) return alert("Script cannot be empty.");
+
+    generateBtn.disabled = true;
+    generateBtn.innerHTML = "⏳ Starting...";
+
+    fetch("{% url 'generate_video_api' %}", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": "{{ csrf_token }}"
+      },
+      body: JSON.stringify({ script: finalScript })
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "started") {
+          generateBtn.innerHTML = "🎥 Generating Video...";
+          pollForVideo();
+        } else {
+          alert("Failed to start video generation.");
+          generateBtn.disabled = false;
+          generateBtn.innerHTML = "🎬 Generate Video";
+        }
+      });
+  });
+
+  function pollForVideo() {
+    let attempts = 0;
+    const maxAttempts = 20;
+
+    const poll = setInterval(() => {
+      fetch("{% url 'video_status_api' %}")
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === "done") {
+            clearInterval(poll);
+            finalVideo.src = data.video_url;
+            videoContainer.classList.remove("d-none");
+
+            // Show download
+            downloadBtn.href = data.video_url;
+            downloadBtn.classList.remove("d-none");
+
+            generateBtn.disabled = false;
+            generateBtn.innerHTML = "🎬 Generate Video";
+          } else if (data.status === "error") {
+            clearInterval(poll);
+            alert("Video generation failed: " + data.error);
+            generateBtn.disabled = false;
+            generateBtn.innerHTML = "🎬 Generate Video";
+          } else {
+            console.log(`Video processing: ${data.progress || 0}%`);
+          }
+        });
+
+      attempts++;
+      if (attempts > maxAttempts) {
+        clearInterval(poll);
+        alert("Video generation timed out.");
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = "🎬 Generate Video";
+      }
+    }, 10000);
+  }
+
+  // 🎯 DOWNLOAD EMAIL MODAL LOGIC
+  downloadBtn.addEventListener("click", function (e) {
+    e.preventDefault();
+    if (!downloadBtn.href) return;
+    const modal = new bootstrap.Modal(document.getElementById('emailModal'));
+    modal.show();
+  });
+
+  document.getElementById("confirm-email-download").addEventListener("click", function () {
+    const emailInput = document.getElementById("email-input");
+    const email = emailInput.value.trim();
+    const errorDiv = document.getElementById("email-error");
+
+    if (!validateEmail(email)) {
+      errorDiv.style.display = "block";
+      return;
+    } else {
+      errorDiv.style.display = "none";
+    }
+
+    fetch("{% url 'collect_email' %}", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": "{{ csrf_token }}"
+      },
+      body: JSON.stringify({ email: email })
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          bootstrap.Modal.getInstance(document.getElementById('emailModal')).hide();
+          document.querySelector('.modal-backdrop')?.remove();
+
+          // Trigger actual download
+          const link = document.createElement("a");
+          link.href = downloadBtn.href;
+          link.download = "your_video.mp4";
+          link.click();
+        } else {
+          alert("Something went wrong. Try again.");
+        }
+      });
+  });
+
+  function validateEmail(email) {
+    const re = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+    return re.test(email);
+  }
+</script>
+
+<!-- <script>
   const chatBox = document.getElementById('chat-box');
   const chatForm = document.getElementById('chat-form');
   const chatInput = document.getElementById('chat-input');
@@ -208,8 +452,62 @@ function pollForVideo() {
     }
   }, 10000); // every 10 seconds
 }
- 
-</script>
+
+  const downloadBtn = document.getElementById("download-video-btn");
+
+  downloadBtn.addEventListener("click", function(e) {
+    e.preventDefault();
+    const videoUrl = downloadBtn.href;
+    if (!videoUrl) return;
+
+    // Show popup instead of download
+    const modal = new bootstrap.Modal(document.getElementById('emailModal'));
+    modal.show();
+  });
+
+  document.getElementById("confirm-email-download").addEventListener("click", function () {
+    const emailInput = document.getElementById("email-input");
+    const email = emailInput.value.trim();
+    const errorDiv = document.getElementById("email-error");
+
+    if (!validateEmail(email)) {
+      errorDiv.style.display = "block";
+      return;
+    } else {
+      errorDiv.style.display = "none";
+    }
+
+    // Save email to backend
+    fetch("{% url 'collect_email' %}", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": "{{ csrf_token }}"
+      },
+      body: JSON.stringify({ email: email })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        document.getElementById('emailModal').classList.remove('show');
+        document.querySelector('.modal-backdrop')?.remove();
+
+        // Trigger download
+        const link = document.createElement("a");
+        link.href = downloadBtn.href;
+        link.download = "your_video.mp4";
+        link.click();
+      } else {
+        alert("Something went wrong. Try again.");
+      }
+    });
+  });
+
+  function validateEmail(email) {
+    const re = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+    return re.test(email);
+  }
+</script> -->
 
 
 {% endblock %}

@@ -7,6 +7,10 @@ from django.shortcuts import render
 from .models import StorySession
 import requests
 from django.conf import settings
+from .models import DownloadEmail
+import re
+
+
 
 @csrf_exempt
 def chat_api(request):
@@ -146,3 +150,21 @@ def create_admin_user(request):
 
     User.objects.create_superuser("admin", "admin@example.com", "admin")
     return JsonResponse({"status": "Superuser created!"})
+
+
+
+
+@csrf_exempt
+def collect_email(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+        email = data.get("email")
+
+        # Simple regex-based email validation (backend)
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            return JsonResponse({"error": "Invalid email."}, status=400)
+
+        DownloadEmail.objects.get_or_create(email=email)
+        return JsonResponse({"success": True})
+    
+    return JsonResponse({"error": "Invalid request"}, status=405)
