@@ -67,14 +67,16 @@ def generate_script(session):
         # ✅ Fallback default
         prompt = f"""
 You are a compassionate, cinematic AI storyteller.
-From this story, generate:
+Be emotionally attuned and encouraging. Make the user feel safe sharing.
+turn this story into a compelling short video that builds gradually in emotional intensity by
+synthesizing the answers into a 5-7 line commentary for a short narrative video. Use first person. End with an insightful and
+inspiring punchline.
+Optimize the commentary for use as a prompt for VideoGen by making every line sound like a voiceover so VideoGen
+interprets your intention through the tone of your words. Use long, breathy sentences for calm, reflective moods.
+Use short, choppy lines to signal intensity or tension. Each line should be emotionally vivid, suggest action or setting, and
+flow as a single voiceover.
+story:
 
-1. A **4-part storyboard** describing each visual scene in detail with headings, visuals, mood, and text overlays.
-2. A **short voiceover script**, no more than **80–90 words**, written like a gentle inner monologue, scene by scene, matching the storyboard.
-
-The script should be paced for a video of about **45–50 seconds**, with poetic and intimate language, vivid imagery, and soft rhythm.
-
-User Story:
 {full_story}
         """
 

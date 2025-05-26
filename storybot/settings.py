@@ -140,8 +140,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 VIDEOGEN_API_KEY = os.getenv('VIDEOGEN_API_KEY')
 
+
+
 STATIC_URL = '/static/'
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'chatbot/static')]  # 👈 ADD this
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
 
 # WhiteNoise config
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'

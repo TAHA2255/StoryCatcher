@@ -1,11 +1,6 @@
 {% extends 'chatbot/base.html' %}
 {% block content %}
 <div class="card shadow-sm">
-  <div id="post-question-actions" class="d-none text-center mb-3">
-  <button class="btn btn-success me-2" id="show-editor-btn" style="padding: 0.75rem 2rem; font-size: 1.25rem;">✏️ Edit Script</button>
-  <button class="btn btn-success" id="generate-direct-btn" style="padding: 0.75rem 2rem; font-size: 1.25rem;">🎬 Generate Video</button>
-
-</div>
   <div class="card-body" id="chat-box" style="max-height: 70vh; overflow-y: auto;">
     <div class="mb-3"><strong>🤖 StoryCatcher:</strong> I’m here to help you turn a life moment into a visual story. Ready to begin your interview?</div>
   </div>
@@ -127,7 +122,7 @@
         data.messages.forEach(msg => {
           if (msg.type === 'result') {
             scriptEditor.value = msg.content.replace(/<[^>]*>?/gm, "");
-            document.getElementById("post-question-actions").classList.remove("d-none");
+            editorSection.classList.remove('d-none');
             appendMessage('StoryCatcher', `<pre style="white-space: pre-wrap;">${msg.content}</pre>`);
             hideForm = true;
           } else if (msg.type === 'final') {
@@ -230,19 +225,6 @@
       }
     }, 10000);
   }
-  document.getElementById("show-editor-btn").addEventListener("click", function () {
-  editorSection.classList.remove("d-none");
-  generateBtn.classList.remove("d-none");
-  this.disabled = true;
-});
-
-document.getElementById("generate-direct-btn").addEventListener("click", function () {
-  const script = scriptEditor.value.trim();
-  if (!script) return alert("Script not ready yet. Try editing it first.");
-  
-  generateBtn.click();  // Reuse the same generate logic
-});
-
 
   // 🎯 DOWNLOAD EMAIL MODAL LOGIC
   downloadBtn.addEventListener("click", function (e) {
