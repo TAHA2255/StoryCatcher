@@ -3,53 +3,55 @@ import requests
 from django.conf import settings
 import time
 import re
+import random
 from .models import PromptConfig
 
 openai.api_key = settings.OPENAI_API_KEY
 
 
-QUESTIONS = [
-    "1. What was the life-changing moment or experience you went through?",
-    "2. What led up to this moment?",
-    "3. What did that moment feel like—emotionally, physically, spiritually?",
-    "4. How did this experience change you afterward?"
+import random
+
+QUESTION_VARIANTS = [
+    [
+        "1. What was the life-changing moment you experienced?\nIt could be anything—a turning point, a challenge, a realization, or even something quiet but deeply meaningful.",
+        "1. Can you tell me about a defining experience in your life?\nThink of a moment that shifted something inside you, big or small.",
+        "1. Describe a life-altering event you've been through.\nIt might be dramatic or subtle—just something that changed your path."
+    ],
+    [
+        "2. What led up to that moment?\nShare what was happening in your life, your thoughts, or the events that brought you there.",
+        "2. Can you walk me through what came before that experience?\nWhat was building inside or around you?",
+        "2. Tell me about the lead-up to that moment.\nWhat set the stage for it to unfold?"
+    ],
+    [
+        "3. What did that moment feel like?\nEmotionally, physically, spiritually—whatever you remember most vividly.",
+        "3. Try to describe the feeling of that experience.\nWere there sights, sounds, or emotions that stood out?",
+        "3. In that moment, how did your body or heart respond?\nFeelings, sensations, or even silence—describe it all."
+    ],
+    [
+        "4. How did this change you afterward?\nTell me how that experience lives in you today.",
+        "4. What’s different now, because of that moment?\nIt might be a belief, a habit, a relationship—anything.",
+        "4. How did that moment shape who you’ve become?\nWhat part of you grew or transformed?"
+    ]
 ]
 
+
+
+
+# QUESTIONS = [
+#     "1. What was the life-changing moment or experience you went through?",
+#     "2. What led up to this moment?",
+#     "3. What did that moment feel like—emotionally, physically, spiritually?",
+#     "4. How did this experience change you afterward?"
+# ]
+
 def get_next_question(session):
-    for i, field in enumerate(['q1', 'q2', 'q3', 'q4']):
+    fields = ['q1', 'q2', 'q3', 'q4']
+    for i, field in enumerate(fields):
         if not getattr(session, field):
-            return QUESTIONS[i]
+            return random.choice(QUESTION_VARIANTS[i])
     return None
 
 
-# def generate_script(session):
-#     full_story = f"""
-#     Q1: {session.q1}
-#     Q2: {session.q2}
-#     Q3: {session.q3}
-#     Q4: {session.q4}
-#     """
-
-#     prompt = f"""
-# You are a compassionate, cinematic AI storyteller.
-# From this story, generate:
-
-# 1. A **4-part storyboard** describing each visual scene in detail with headings, visuals, mood, and text overlays.
-# 2. A **short voiceover script**, no more than **80–90 words**, written like a gentle inner monologue, scene by scene, matching the storyboard.
-
-# The script should be paced for a video of about **45–50 seconds**, with poetic and intimate language, vivid imagery, and soft rhythm.
-
-# User Story:
-# {full_story}
-#     """
-
-#     response = openai.ChatCompletion.create(
-#         model="gpt-4",
-#         messages=[{"role": "user", "content": prompt}],
-#         temperature=0.85
-#     )
-
-#     return response['choices'][0]['message']['content']
 def generate_script(session):
     full_story = f"""
     Q1: {session.q1}
