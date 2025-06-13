@@ -11,37 +11,27 @@ openai.api_key = settings.OPENAI_API_KEY
 
 import random
 
-QUESTION_VARIANTS = [
-    [
-        "1. What was the life-changing moment you experienced?\nIt could be anything—a turning point, a challenge, a realization, or even something quiet but deeply meaningful.",
-        "1. Can you tell me about a defining experience in your life?\nThink of a moment that shifted something inside you, big or small.",
-        "1. Describe a life-altering event you've been through.\nIt might be dramatic or subtle—just something that changed your path."
-    ],
-    [
-        "2. What led up to that moment?\nShare what was happening in your life, your thoughts, or the events that brought you there.",
-        "2. Can you walk me through what came before that experience?\nWhat was building inside or around you?",
-        "2. Tell me about the lead-up to that moment.\nWhat set the stage for it to unfold?"
-    ],
-    [
-        "3. What did that moment feel like?\nEmotionally, physically, spiritually—whatever you remember most vividly.",
-        "3. Try to describe the feeling of that experience.\nWere there sights, sounds, or emotions that stood out?",
-        "3. In that moment, how did your body or heart respond?\nFeelings, sensations, or even silence—describe it all."
-    ],
-    [
-        "4. How did this change you afterward?\nTell me how that experience lives in you today.",
-        "4. What’s different now, because of that moment?\nIt might be a belief, a habit, a relationship—anything.",
-        "4. How did that moment shape who you’ve become?\nWhat part of you grew or transformed?"
-    ]
-]
-
-
-
-
-# QUESTIONS = [
-#     "1. What was the life-changing moment or experience you went through?",
-#     "2. What led up to this moment?",
-#     "3. What did that moment feel like—emotionally, physically, spiritually?",
-#     "4. How did this experience change you afterward?"
+# QUESTION_VARIANTS = [
+#     [
+#         "1. What was the life-changing moment you experienced?\nIt could be anything—a turning point, a challenge, a realization, or even something quiet but deeply meaningful.",
+#         "1. Can you tell me about a defining experience in your life?\nThink of a moment that shifted something inside you, big or small.",
+#         "1. Describe a life-altering event you've been through.\nIt might be dramatic or subtle—just something that changed your path."
+#     ],
+#     [
+#         "2. What led up to that moment?\nShare what was happening in your life, your thoughts, or the events that brought you there.",
+#         "2. Can you walk me through what came before that experience?\nWhat was building inside or around you?",
+#         "2. Tell me about the lead-up to that moment.\nWhat set the stage for it to unfold?"
+#     ],
+#     [
+#         "3. What did that moment feel like?\nEmotionally, physically, spiritually—whatever you remember most vividly.",
+#         "3. Try to describe the feeling of that experience.\nWere there sights, sounds, or emotions that stood out?",
+#         "3. In that moment, how did your body or heart respond?\nFeelings, sensations, or even silence—describe it all."
+#     ],
+#     [
+#         "4. How did this change you afterward?\nTell me how that experience lives in you today.",
+#         "4. What’s different now, because of that moment?\nIt might be a belief, a habit, a relationship—anything.",
+#         "4. How did that moment shape who you’ve become?\nWhat part of you grew or transformed?"
+#     ]
 # ]
 
 def get_next_question(session):
