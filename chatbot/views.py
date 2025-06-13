@@ -151,7 +151,7 @@ def chat_api(request):
         response_data.append({
             "role": "assistant",
             "type": "edit_prompt",
-            "content": "Would you like to revise the script? Paste your edits below and click 'Regenerate'."
+            "content": "Would you like to revise the script? Do your edits below and click 'generate video'."
         })
 
     return JsonResponse({"messages": response_data})
