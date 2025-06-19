@@ -158,32 +158,39 @@ def chat_api(request):
 
 @csrf_exempt
 def generate_video_api(request):
-    if not request.session.session_key:
-        return JsonResponse({"error": "Session not found"}, status=403)
 
-    user_id = request.session.session_key
-    session = StorySession.objects.get(user_id=user_id)
+    try:
+        if not request.session.session_key:
+            return JsonResponse({"error": "Session not found"}, status=403)
 
-    data = json.loads(request.body)
-    updated_script = data.get("script")
+        user_id = request.session.session_key
+        session = StorySession.objects.get(user_id=user_id)
 
-    if updated_script:
-        session.generated_script = updated_script
-        session.video_url = ""
+        data = json.loads(request.body)
+        updated_script = data.get("script")
+
+        if updated_script:
+            session.generated_script = updated_script
+            session.video_url = ""
+            session.save()
+
+        # ✅ Start the job but DO NOT wait
+        api_file_id = create_videogen_video_lazy(session.generated_script)
+        print(api_file_id)
+
+        session.videogen_file_id = api_file_id  # Save file ID to track status later
         session.save()
 
-    # ✅ Start the job but DO NOT wait
-    api_file_id = create_videogen_video_lazy(session.generated_script)
-    print(api_file_id)
+        return JsonResponse({
+            "status": "started",
+            "api_file_id": api_file_id
+        })
+    except Exception as e:
+            # Log the error
+            import traceback
+            traceback.print_exc()
 
-    session.videogen_file_id = api_file_id  # Save file ID to track status later
-    session.save()
-
-    return JsonResponse({
-        "status": "started",
-        "api_file_id": api_file_id
-    })
-
+            return JsonResponse({"error": f"Video generation failed: {str(e)}"}, status=500)
 
     
 def chat_home(request):

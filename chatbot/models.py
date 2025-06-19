@@ -10,7 +10,7 @@ class StorySession(models.Model):
     q3 = models.TextField(blank=True)
     q4 = models.TextField(blank=True)
     generated_script = models.TextField(blank=True, null=True)
-    video_url = models.URLField(blank=True, null=True)
+    video_url = models.URLField(max_length=1000,blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     user_script_modification = models.TextField(blank=True)
     videogen_file_id = models.CharField(max_length=255, blank=True, null=True)
