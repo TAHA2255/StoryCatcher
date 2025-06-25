@@ -13,9 +13,9 @@
   </div>
   <div id="script-loader" class="text-center my-3 d-none">
     <div class="spinner-border text-primary" role="status">
-      <span class="visually-hidden">Generating script...</span>
+      <span class="visually-hidden">Please Wait</span>
     </div>
-    <div>Generating script...</div>
+    <div>Please Wait</div>
   </div>
   
 </form>
@@ -62,6 +62,8 @@
   </div>
 </div>
 
+
+
 <script>
   const chatBox = document.getElementById('chat-box');
   const chatForm = document.getElementById('chat-form');
@@ -72,13 +74,14 @@
   const finalVideo = document.getElementById('final-video');
   const videoContainer = document.getElementById('video-result');
   const downloadBtn = document.getElementById("download-video-btn");
+  const emailModal = document.getElementById("emailModal");
 
   let started = false;
+  let emailSubmitted = false;
 
   function appendMessage(role, content, isFinal = false, videoUrl = null) {
     const wrapper = document.createElement('div');
     wrapper.classList.add('mb-4');
-
     const messageDiv = document.createElement('div');
     messageDiv.innerHTML = `<strong>${role === 'user' ? '🧍 You' : '🤖 StoryCatcher'}:</strong> ${content}`;
     wrapper.appendChild(messageDiv);
@@ -86,13 +89,11 @@
     if (isFinal && videoUrl) {
       const videoDiv = document.createElement('div');
       videoDiv.classList.add('mt-2');
-
       const video = document.createElement('video');
       video.controls = true;
       video.src = videoUrl;
       video.style.width = "100%";
       videoDiv.appendChild(video);
-
       wrapper.appendChild(videoDiv);
     }
 
@@ -128,8 +129,6 @@
       chatInput.disabled = false;
       chatInput.focus();
 
-      let hideForm = false;
-
       data.messages.forEach(msg => {
         if (msg.type === 'result') {
           scriptEditor.value = msg.content.replace(/<[^>]*>?/gm, "");
@@ -164,13 +163,12 @@
     }
   });
 
-  // 📧 Trigger email modal before generating video
   generateBtn.addEventListener('click', function () {
-    const modal = new bootstrap.Modal(document.getElementById('emailModal'));
+    const modal = new bootstrap.Modal(emailModal);
     modal.show();
   });
 
-  // 🎯 Confirm email and start video generation
+  // Email submit button
   document.getElementById("confirm-email-download").addEventListener("click", function () {
     const emailInput = document.getElementById("email-input");
     const email = emailInput.value.trim();
@@ -183,6 +181,7 @@
       errorDiv.style.display = "none";
     }
 
+    // Store email
     fetch("{% url 'collect_email' %}", {
       method: "POST",
       headers: {
@@ -194,39 +193,48 @@
     .then(res => res.json())
     .then(data => {
       if (data.success) {
-        bootstrap.Modal.getInstance(document.getElementById('emailModal')).hide();
+        emailSubmitted = true;
+        bootstrap.Modal.getInstance(emailModal).hide();
         document.querySelector('.modal-backdrop')?.remove();
-
-        const finalScript = scriptEditor.value.trim();
-        if (!finalScript) return alert("Script cannot be empty.");
-
-        generateBtn.disabled = true;
-        generateBtn.innerHTML = "⏳ Starting...";
-
-        fetch("{% url 'generate_video_api' %}", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": "{{ csrf_token }}"
-          },
-          body: JSON.stringify({ script: finalScript })
-        })
-        .then(res => res.json())
-        .then(data => {
-          if (data.status === "started") {
-            generateBtn.innerHTML = "🎥 Generating Video...Please Wait for a few minutes";
-            pollForVideo();
-          } else {
-            alert("Failed to start video generation.");
-            generateBtn.disabled = false;
-            generateBtn.innerHTML = "🎬 Generate Video";
-          }
-        });
-      } else {
-        alert("Something went wrong. Try again.");
       }
     });
   });
+
+  // Trigger video generation when modal is closed
+  emailModal.addEventListener('hidden.bs.modal', function () {
+    if (!emailSubmitted) {
+      console.log("User skipped email — continuing anyway.");
+    }
+    startVideoGeneration();
+  });
+
+  function startVideoGeneration() {
+    const finalScript = scriptEditor.value.trim();
+    if (!finalScript) return alert("Script cannot be empty.");
+
+    generateBtn.disabled = true;
+    generateBtn.innerHTML = "⏳ Starting...";
+
+    fetch("{% url 'generate_video_api' %}", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": "{{ csrf_token }}"
+      },
+      body: JSON.stringify({ script: finalScript })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === "started") {
+        generateBtn.innerHTML = "🎥 Generating Video....Please Wait";
+        pollForVideo();
+      } else {
+        alert("Failed to start video generation.");
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = "🎬 Generate Video";
+      }
+    });
+  }
 
   function pollForVideo() {
     let attempts = 0;
@@ -240,10 +248,8 @@
             clearInterval(poll);
             finalVideo.src = data.video_url;
             videoContainer.classList.remove("d-none");
-
             downloadBtn.href = data.video_url;
             downloadBtn.classList.remove("d-none");
-
             generateBtn.disabled = false;
             generateBtn.innerHTML = "🎬 Generate Video";
           } else if (data.status === "error") {
@@ -271,5 +277,4 @@
     return re.test(email);
   }
 </script>
-
 {% endblock %}

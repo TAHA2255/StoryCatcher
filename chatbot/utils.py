@@ -57,20 +57,35 @@ def generate_script(session):
         prompt = prompt_obj.prompt_template.replace("{{story}}", full_story)
     else:
         # ✅ Fallback default
-        prompt = f"""
-You are a compassionate, cinematic AI storyteller.
-Be emotionally attuned and encouraging. Make the user feel safe sharing.
-turn this story into a compelling short video that builds gradually in emotional intensity by
-synthesizing the answers into a 5-7 line commentary for a short narrative video. Use first person. End with an insightful and
-inspiring punchline.
-Optimize the commentary for use as a prompt for VideoGen by making every line sound like a voiceover so VideoGen
-interprets your intention through the tone of your words. Use long, breathy sentences for calm, reflective moods.
-Use short, choppy lines to signal intensity or tension. Each line should be emotionally vivid, suggest action or setting, and
-flow as a single voiceover.
-story:
+#         prompt = f"""
+# You are a compassionate, cinematic AI storyteller.
+# Be emotionally attuned and encouraging. Make the user feel safe sharing.
+# turn this story into a compelling short video that builds gradually in emotional intensity by
+# synthesizing the answers into a 5-7 line commentary for a short narrative video. Use first person. End with an insightful and
+# inspiring punchline.
+# Optimize the commentary for use as a prompt for VideoGen by making every line sound like a voiceover so VideoGen
+# interprets your intention through the tone of your words. Use long, breathy sentences for calm, reflective moods.
+# Use short, choppy lines to signal intensity or tension. Each line should be emotionally vivid, suggest action or setting, and
+# flow as a single voiceover.
+# story:
 
-{full_story}
+# {full_story}
+#         """
+
+        prompt = f"""
+        You are a compassionate AI storyteller.
+
+        Given the user's answers below, synthesize them into a simple, heartfelt 5-7 line voiceover script.
+
+        ✅ Use first-person narration.
+        ✅ Keep each line emotionally expressive and reflective.
+        ✅ Do NOT include any scene headings, screenplay formatting, or visual descriptions.
+        ✅ Just output the voiceover script only — plain text, each line representing a part of the narrative.
+
+        Here is the story:
+        {full_story}
         """
+
 
     response = openai.ChatCompletion.create(
         model="gpt-4",

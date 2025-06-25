@@ -255,6 +255,14 @@ def collect_email(request):
             return JsonResponse({"error": "Invalid email."}, status=400)
 
         DownloadEmail.objects.get_or_create(email=email)
+
+        # ✅ Also save to the user's StorySession
+        if request.session.session_key:
+            user_id = request.session.session_key
+            session = StorySession.objects.filter(user_id=user_id).first()
+            if session:
+                session.email = email
+                session.save()
         return JsonResponse({"success": True})
     
     return JsonResponse({"error": "Invalid request"}, status=405)

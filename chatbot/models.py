@@ -15,6 +15,12 @@ class StorySession(models.Model):
     user_script_modification = models.TextField(blank=True)
     videogen_file_id = models.CharField(max_length=255, blank=True, null=True)
     chat_history = models.JSONField(default=list, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True) 
+
+    def __str__(self):
+        return f"Session by {self.email or 'Unknown(Email not Provided)'} at {self.created_at.strftime('%Y-%m-%d %H:%M')}"
+
+
 
 
 
