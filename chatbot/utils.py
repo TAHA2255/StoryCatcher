@@ -71,20 +71,26 @@ def generate_script(session):
 
 # {full_story}
 #         """
+            prompt = f"""
+            You are a compassionate AI storyteller.
 
-        prompt = f"""
-        You are a compassionate AI storyteller.
+            Given the user's answers below, craft a 5–7 line voiceover script.
 
-        Given the user's answers below, synthesize them into a simple, heartfelt 5-7 line voiceover script.
+            🎯 Format:
+            - Number each line: 1., 2., 3., ...
+            - Wrap every line in double quotes: "..."
+            - One line per narration idea
+            - Do not include scene headings, markdown, or screenplay formatting
 
-        ✅ Use first-person narration.
-        ✅ Keep each line emotionally expressive and reflective.
-        ✅ Do NOT include any scene headings, screenplay formatting, or visual descriptions.
-        ✅ Just output the voiceover script only — plain text, each line representing a part of the narrative.
+            🧠 Style:
+            - First-person narration
+            - Emotionally expressive and reflective
+            - Use vivid but simple language
+            - No camera or visual instructions — just the narration
 
-        Here is the story:
-        {full_story}
-        """
+            Here is the story:
+            {full_story}
+            """
 
 
     response = openai.ChatCompletion.create(
