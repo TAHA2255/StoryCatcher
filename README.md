@@ -40,20 +40,3 @@
 | Hosting          | Render / Supabase      |
 
 ---
-
-## 📦 Setup
-
-```bash
-git clone https://github.com/your-username/storycatcher.git
-cd storycatcher
-pip install -r requirements.txt
-
-# Set up environment variables
-cp .env.example .env
-# or create your own .env file with API keys
-
-# Run Django migrations
-python manage.py migrate
-
-# Run the development server
-python manage.py runserver
