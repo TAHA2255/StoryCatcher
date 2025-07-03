@@ -36,7 +36,7 @@
 | Frontend         | Bootstrap 5, Vanilla JS|
 | AI Integration   | OpenAI GPT-4 / GPT-4o  |
 | Video Generator  | VideoGen API           |
-| Database         | SQLite / PostgreSQL    |
-| Hosting          | Render / Supabase      |
+| Database         | PostgreSQL |
+| Hosting          | Render     |
 
 ---
